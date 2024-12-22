@@ -3,6 +3,7 @@
 
 #include <string>
 #include <algorithm>
+#include <cstdio> //for std::FILE
 
 #if __has_include(<version>)
 #include <version>
@@ -12,8 +13,10 @@
 
 #ifdef __cpp_lib_print
 #include <print>
+#define DP_DUMP_USING_STD_PRINT
 #elif defined(__cpp_lib_format)
 #include <format>
+#define DP_DUMP_USING_STD_FORMAT
 #endif
 
 namespace dp{
@@ -80,7 +83,13 @@ namespace detail{
 	template<typename... Args>
 	void dump(std::FILE* fl, Args&&... args){
 		static constexpr auto format_string {detail::generate_format_string<sizeof...(Args)>()};
+		#ifdef DP_DUMP_USING_STD_PRINT
 		std::print(fl, static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
+		#elif defined(DP_DUMP_USING_STD_FORMAT)
+ 		std::fputs(std::format(static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...).c_str(), fl);
+		#else
+		#error "Attempt to use dump without a valid formatting handler"
+		#endif
 	}
 	template<typename... Args>
 	void dump(Args&&... args){
@@ -90,7 +99,13 @@ namespace detail{
 	template<typename... Args>
 	void dumpln(std::FILE* fl, Args&&... args){
 		static constexpr auto format_string{detail::generate_format_string<sizeof...(Args)>()};
+		#ifdef DP_DUMP_USING_STD_PRINT
 		std::println(fl, static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
+		#elif defined(DP_DUMP_USING_STD_FORMAT)
+		std::fputs(std::format(static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...).c_str(), fl);
+		#else
+		#error "Attempt to use dumpln without a valid formatting handler"
+		#endif
 	}
 	template<typename... Args>
 	void dumpln(Args&&... args){
@@ -100,5 +115,10 @@ namespace detail{
 	
 	
 }	//namespace dp
+
+
+#undef DP_DUMP_USING_STD_PRINT
+#undef DP_DUMP_USING_STD_FORMAT
+
 
 #endif
