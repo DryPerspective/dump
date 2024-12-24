@@ -10,7 +10,6 @@
 */
 
 
-
 #include <string>
 #include <algorithm>
 #include <cstdio> //for std::FILE
@@ -21,9 +20,19 @@
 #define DP_DUMP_CPLUSPLUS __cplusplus
 #endif
 
-
-//Require the right language standard for this tool
+//Check for the availablility of __has_include, as it makes a great many of our checks and potential error messages
+//cleaner.
+//It was formalised into standard C++ as part of C++17, but existed in certain implementations for a lot longer before that
 #if DP_DUMP_CPLUSPLUS >= 201703L
+#define DP_DUMP_HAS_INCLUDE
+#elif defined(__GNUC__)
+#ifdef __has_include 
+#define DP_DUMP_HAS_INCLUDE
+#endif
+#endif
+
+
+#ifdef DP_DUMP_HAS_INCLUDE
 #if __has_include(<version>)
 #include <version>
 #endif
@@ -34,7 +43,17 @@
 #include <type_traits>
 #include <utility>
 
-#ifdef __cpp_lib_print
+#ifdef DP_DUMP_USE_FMTLIB
+#define DP_DUMP_USING_FMT
+//Generate a nicer error message if possible
+	#ifdef DP_DUMP_HAS_INCLUDE
+		#if ! __has_include("fmt/format.h")
+		#error "Using dp::dump and fmtlib but could not find fmtlib headers. Please check your include path"
+		#endif
+	#endif
+#include "fmt/format.h"
+#include "fmt/ostream.h"
+#elif defined (__cpp_lib_print)
 #include <print>
 #define DP_DUMP_USING_STD_PRINT
 #elif defined(__cpp_lib_format)
@@ -76,18 +95,27 @@ namespace detail{
 
 namespace dp{
 namespace detail{
-
+	//Since std::size is not available in earlier C++ versions
+	template<typename T, std::size_t N>
+	constexpr std::size_t size(T (&)[N]){
+		return N;
+	}
 
 	//A class which can generate an appropriate format string at comptime
 	template<std::size_t N>
 	class dump_string_buf{
 
-		char buf[N];
+		char buf[N] = {};
 	public:
-	
+		constexpr dump_string_buf(){
+			std::fill(std::begin(buf), std::end(buf), '\0');
+		}	
 	
 		constexpr dump_string_buf(const char (&arr)[N]){
-			std::copy(std::begin(arr), std::end(arr), std::begin(buf));
+			//std::copy isn't constexpr in all targets
+			for(std::size_t i = 0; i < N; ++i){
+				buf[i] = arr[i];
+			}
 		}
 
 		constexpr dump_string_buf(const std::string& arr){
@@ -120,8 +148,8 @@ namespace detail{
 	#endif
 	auto generate_format_string(){
 		//3N + 1 to cover "{} " for each term plus a null terminator	
-		char array[3*N + 1];
-		for(std::size_t i = 0; i + 3 < std::size(array); i += 3){
+		char array[3*N + 1] = {};
+		for(std::size_t i = 0; i + 3 < dp::detail::size(array); i += 3){
 			array[i] = '{';
 			array[i + 1] = '}';
 			array[i + 2] = ' ';
@@ -142,6 +170,8 @@ namespace detail{
 		std::print(fl, static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
 		#elif defined(DP_DUMP_USING_STD_FORMAT)
  		std::fputs(std::format(static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...).c_str(), fl);
+		#elif defined(DP_DUMP_USING_FMT)
+		fmt::print(fl, static_cast<fmt::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
 		#else
 		#error "Attempt to use dump without a valid formatting handler"
 		#endif
@@ -157,6 +187,8 @@ namespace detail{
 		std::print(os, static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
 		#elif defined(DP_DUMP_USING_STD_FORMAT)
 		os << std::format(static_cast<std::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
+		#elif defined(DP_DUMP_USING_FMT)
+		fmt::print(os, static_cast<fmt::format_string<Args...>>(format_string.c_str()), std::forward<Args>(args)...);
 		#else
 		#error "Attempt to use dump without a valid formatting handler"
 		#endif
@@ -190,5 +222,7 @@ namespace detail{
 #undef DP_DUMP_USING_STD_FORMAT
 #undef DP_DUMP_CPLUSPLUS
 #undef DP_DUMP_VARIADIC_PREAMBLE
+#undef DP_DUMP_HAS_INCLUDE
+#undef DP_DUMP_USING_FMT
 
 #endif
