@@ -118,11 +118,6 @@ namespace detail{
 			}
 		}
 
-		constexpr dump_string_buf(const std::string& arr){
-			std::fill(std::begin(buf), std::end(buf), '\0');
-			std::copy_n(std::begin(arr), N, std::begin(buf));
-		}
-
 		constexpr const char* c_str() const{
 			return buf;
 		}
