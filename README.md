@@ -33,7 +33,7 @@ int main(){
 };
 ```
 
-When compiled to the C++23 standard, this will call `std::print` to place `1 2 3` into the output file specified. If compiled with `-DDP_DUMP_USE_FMTLIB` (or your platform's equivalent) and linked with fmtlib, you will get the same observible behaviour as if `fmt::print(os, "{} {} {}", 1, 2, 3);` had been called.
+When compiled to the C++23 standard, this will call `std::println` to place `1 2 3` into the output file specified. If compiled with `-DDP_DUMP_USE_FMTLIB` (or your platform's equivalent) and linked with fmtlib, you will get the same observible behaviour as if `fmt::print(os, "{} {} {}", 1, 2, 3);` had been called.
 
 ## FAQ
 
